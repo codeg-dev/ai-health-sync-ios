@@ -1043,6 +1043,13 @@ func isLocalNetworkHost(_ host: String) -> Bool {
             return true
         }
     }
+    // Allow Tailscale CGNAT range (RFC 6598: 100.64.0.0/10 = 100.64-127.x.x)
+    if host.starts(with: "100.") {
+        let parts = host.split(separator: ".")
+        if parts.count >= 2, let second = Int(parts[1]), (64...127).contains(second) {
+            return true
+        }
+    }
     // Allow IPv6 loopback (::1)
     if lowercaseHost == "::1" || lowercaseHost == "[::1]" {
         return true

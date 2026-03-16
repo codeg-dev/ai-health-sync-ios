@@ -103,6 +103,16 @@ struct LocalNetworkHostTests {
         #expect(!isLocalNetworkHost("172.15.0.1")) // Just outside private range
         #expect(!isLocalNetworkHost("example.com"))
     }
+
+    @Test("Allows Tailscale CGNAT range")
+    func tailscaleCGNAT() {
+        #expect(isLocalNetworkHost("100.95.234.69"))   // gphone-17
+        #expect(isLocalNetworkHost("100.64.0.1"))       // CGNAT start
+        #expect(isLocalNetworkHost("100.127.255.255"))  // CGNAT end
+        #expect(!isLocalNetworkHost("100.128.0.1"))     // Outside CGNAT
+        #expect(!isLocalNetworkHost("100.63.255.255"))  // Below CGNAT
+        #expect(!isLocalNetworkHost("101.1.1.1"))       // Public IP
+    }
 }
 
 // MARK: - Pairing Payload Tests
