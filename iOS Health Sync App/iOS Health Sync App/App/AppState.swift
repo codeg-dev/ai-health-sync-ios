@@ -4,6 +4,7 @@
 import CryptoKit
 import Foundation
 import HealthKit
+import Network
 import Observation
 import os
 import SwiftData
