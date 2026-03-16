@@ -88,41 +88,128 @@ struct HealthSampleMapper {
         }
     }
 
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     static func unitForQuantityType(_ type: HealthDataType) -> HKUnit {
         switch type {
-        case .steps, .standHours, .flightsClimbed:
+        // Activity - counts
+        case .steps, .standHours, .flightsClimbed, .swimmingStrokeCount, .pushCount,
+             .estimatedWorkoutEffortScore, .workoutEffortScore, .physicalEffort,
+             .inhalerUsage, .numberOfTimesFallen, .numberOfAlcoholicBeverages, .uvExposure:
             return .count()
-        case .distanceWalkingRunning, .distanceCycling:
+        // Activity - distances (meters)
+        case .distanceWalkingRunning, .distanceCycling, .distanceSwimming,
+             .distanceWheelchair, .distanceDownhillSnowSports, .distanceCrossCountrySkiing,
+             .distancePaddleSports, .distanceRowing, .distanceSkatingSports,
+             .sixMinuteWalkTestDistance, .walkingStepLength, .underwaterDepth,
+             .waistCircumference, .height, .runningStrideLength, .runningVerticalOscillation:
             return .meter()
-        case .activeEnergyBurned, .basalEnergyBurned:
+        // Activity - energy
+        case .activeEnergyBurned, .basalEnergyBurned, .dietaryEnergyConsumed:
             return .kilocalorie()
-        case .exerciseTime:
+        // Activity - time
+        case .exerciseTime, .appleMoveTime:
             return .minute()
-        case .heartRate, .restingHeartRate, .walkingHeartRateAverage:
+        case .runningGroundContactTime, .timeInDaylight:
+            return .second()
+        // Activity - speed (m/s)
+        case .runningSpeed, .cyclingSpeed, .crossCountrySkiingSpeed,
+             .paddleSportsSpeed, .rowingSpeed, .walkingSpeed,
+             .stairAscentSpeed, .stairDescentSpeed:
+            return HKUnit(from: "m/s")
+        // Activity - power (watts)
+        case .runningPower, .cyclingPower, .cyclingFunctionalThresholdPower:
+            return .watt()
+        // Activity - cadence
+        case .cyclingCadence:
+            return HKUnit.count().unitDivided(by: .minute())
+        // Mobility - percentages
+        case .walkingAsymmetryPercentage, .walkingDoubleSupportPercentage, .appleWalkingSteadiness:
+            return .percent()
+        // Vitals - heart rate
+        case .heartRate, .restingHeartRate, .walkingHeartRateAverage, .heartRateRecoveryOneMinute:
             return .count().unitDivided(by: .minute())
         case .heartRateVariability:
             return .second()
+        case .atrialFibrillationBurden:
+            return .percent()
+        // Vitals - blood pressure
         case .bloodPressureSystolic, .bloodPressureDiastolic:
             return .millimeterOfMercury()
-        case .bloodOxygen:
+        // Vitals - percentages
+        case .bloodOxygen, .bodyFatPercentage, .bloodAlcoholContent, .peripheralPerfusionIndex:
             return .percent()
+        // Vitals - rates
         case .respiratoryRate:
             return .count().unitDivided(by: .minute())
-        case .bodyTemperature:
+        // Vitals - temperature
+        case .bodyTemperature, .basalBodyTemperature, .appleSleepingWristTemperature, .waterTemperature:
             return .degreeCelsius()
+        // Vitals - fitness
         case .vo2Max:
             return HKUnit(from: "ml/kg*min")
-        case .weight:
+        // Vitals - glucose
+        case .bloodGlucose:
+            return HKUnit(from: "mg/dL")
+        // Vitals - insulin
+        case .insulinDelivery:
+            return .internationalUnit()
+        // Vitals - electrodermal
+        case .electrodermalActivity:
+            return HKUnit(from: "mcS")
+        // Vitals - lung function
+        case .forcedExpiratoryVolume1, .forcedVitalCapacity:
+            return .liter()
+        case .peakExpiratoryFlowRate:
+            return HKUnit(from: "L/min")
+        // Vitals - sleep breathing
+        case .appleSleepingBreathingDisturbances:
+            return HKUnit.count().unitDivided(by: .hour())
+        // Body
+        case .weight, .leanBodyMass:
             return .gramUnit(with: .kilo)
-        case .height:
-            return .meter()
         case .bodyMassIndex:
             return .count()
-        case .bodyFatPercentage:
-            return .percent()
-        case .leanBodyMass:
-            return .gramUnit(with: .kilo)
-        case .sleepAnalysis, .sleepInBed, .sleepAsleep, .sleepAwake, .sleepREM, .sleepCore, .sleepDeep, .workouts:
+        // Hearing - dBASPL
+        case .environmentalAudioExposure, .headphoneAudioExposure, .environmentalSoundReduction:
+            return .decibelAWeightedSoundPressureLevel()
+        // Nutrition - energy
+        // (dietaryEnergyConsumed handled above)
+        // Nutrition - water
+        case .dietaryWater:
+            return .literUnit(with: .milli)
+        // Nutrition - mass (grams for all remaining macros/micronutrients)
+        case .dietaryProtein, .dietaryCarbohydrates, .dietaryFatTotal, .dietaryFatSaturated,
+             .dietaryFatMonounsaturated, .dietaryFatPolyunsaturated, .dietaryFiber, .dietarySugar,
+             .dietarySodium, .dietaryPotassium, .dietaryCalcium, .dietaryPhosphorus,
+             .dietaryMagnesium, .dietaryIron, .dietaryZinc, .dietarySelenium, .dietaryChloride,
+             .dietaryChromium, .dietaryCopper, .dietaryIodine, .dietaryMolybdenum,
+             .dietaryManganese, .dietaryNiacin, .dietaryRiboflavin, .dietaryThiamin,
+             .dietaryPantothenicAcid, .dietaryBiotin, .dietaryFolate,
+             .dietaryVitaminA, .dietaryVitaminB6, .dietaryVitaminB12, .dietaryVitaminC,
+             .dietaryVitaminD, .dietaryVitaminE, .dietaryVitaminK,
+             .dietaryCaffeine, .dietaryCholesterol:
+            return .gram()
+        // Category types — unit not used for quantity reading, return count as placeholder
+        case .sleepAnalysis, .sleepInBed, .sleepAsleep, .sleepAwake, .sleepREM, .sleepCore, .sleepDeep,
+             .workouts,
+             .abdominalCramps, .bloating, .constipation, .diarrhea, .heartburn,
+             .nausea, .vomiting, .appetiteChanges, .chills, .dizziness, .fainting,
+             .fatigue, .fever, .generalizedBodyAche, .hotFlashes,
+             .chestTightnessOrPain, .coughing, .rapidPoundingOrFlutteringHeartbeat,
+             .shortnessOfBreath, .skippedHeartbeat, .wheezing,
+             .lowerBackPain, .headache, .memoryLapse, .moodChanges,
+             .lossOfSmell, .lossOfTaste, .runnyNose, .soreThroat, .sinusCongestion,
+             .breastPain, .pelvicPain, .vaginalDryness,
+             .acne, .drySkin, .hairLoss, .nightSweats, .sleepChanges, .bladderIncontinence,
+             .lowHeartRateEvent, .highHeartRateEvent, .irregularHeartRhythmEvent,
+             .appleStandHour, .appleWalkingSteadinessEvent, .lowCardioFitnessEvent,
+             .environmentalAudioExposureEvent, .headphoneAudioExposureEvent,
+             .menstrualFlow, .intermenstrualBleeding, .infrequentMenstrualCycles,
+             .irregularMenstrualCycles, .persistentIntermenstrualBleeding, .prolongedMenstrualPeriods,
+             .cervicalMucusQuality, .ovulationTestResult, .progesteroneTestResult,
+             .sexualActivity, .contraceptive, .pregnancy, .pregnancyTestResult, .lactation,
+             .toothbrushingEvent, .handwashingEvent,
+             .stateOfMind:
             return .count()
         }
     }
