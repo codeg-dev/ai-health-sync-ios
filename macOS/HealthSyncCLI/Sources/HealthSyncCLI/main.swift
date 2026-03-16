@@ -515,12 +515,72 @@ struct HealthSyncCLI {
               let typesString = options["--types"] else {
             throw CLIError.invalidArguments("Missing fetch arguments")
         }
+        let categoryMap: [String: [HealthDataType]] = [
+            "vitals": [.heartRate, .restingHeartRate, .walkingHeartRateAverage, .heartRateVariability,
+                       .bloodPressureSystolic, .bloodPressureDiastolic, .bloodOxygen, .respiratoryRate,
+                       .bodyTemperature, .vo2Max, .heartRateRecoveryOneMinute, .atrialFibrillationBurden,
+                       .bloodGlucose, .insulinDelivery, .inhalerUsage, .numberOfTimesFallen,
+                       .electrodermalActivity, .forcedExpiratoryVolume1, .forcedVitalCapacity,
+                       .peakExpiratoryFlowRate, .peripheralPerfusionIndex, .bloodAlcoholContent,
+                       .numberOfAlcoholicBeverages],
+            "nutrition": [.dietaryEnergyConsumed, .dietaryProtein, .dietaryCarbohydrates, .dietaryFatTotal,
+                          .dietaryFatSaturated, .dietaryFatMonounsaturated, .dietaryFatPolyunsaturated,
+                          .dietaryFiber, .dietarySugar, .dietarySodium, .dietaryPotassium, .dietaryCalcium,
+                          .dietaryPhosphorus, .dietaryMagnesium, .dietaryIron, .dietaryZinc, .dietarySelenium,
+                          .dietaryChloride, .dietaryChromium, .dietaryCopper, .dietaryIodine, .dietaryMolybdenum,
+                          .dietaryManganese, .dietaryNiacin, .dietaryRiboflavin, .dietaryThiamin,
+                          .dietaryPantothenicAcid, .dietaryBiotin, .dietaryFolate, .dietaryVitaminA,
+                          .dietaryVitaminB6, .dietaryVitaminB12, .dietaryVitaminC, .dietaryVitaminD,
+                          .dietaryVitaminE, .dietaryVitaminK, .dietaryCaffeine, .dietaryWater, .dietaryCholesterol],
+            "symptoms": [.abdominalCramps, .bloating, .constipation, .diarrhea, .heartburn, .nausea,
+                         .vomiting, .appetiteChanges, .chills, .dizziness, .fainting, .fatigue, .fever,
+                         .generalizedBodyAche, .hotFlashes, .chestTightnessOrPain, .coughing,
+                         .rapidPoundingOrFlutteringHeartbeat, .shortnessOfBreath, .skippedHeartbeat, .wheezing,
+                         .lowerBackPain, .headache, .memoryLapse, .moodChanges, .lossOfSmell, .lossOfTaste,
+                         .runnyNose, .soreThroat, .sinusCongestion, .breastPain, .pelvicPain, .vaginalDryness,
+                         .acne, .drySkin, .hairLoss, .nightSweats, .sleepChanges, .bladderIncontinence],
+            "activity": [.steps, .distanceWalkingRunning, .distanceCycling, .activeEnergyBurned,
+                         .basalEnergyBurned, .exerciseTime, .standHours, .flightsClimbed, .workouts,
+                         .runningSpeed, .runningPower, .runningStrideLength, .runningGroundContactTime,
+                         .runningVerticalOscillation, .cyclingCadence, .cyclingPower, .cyclingFunctionalThresholdPower,
+                         .cyclingSpeed, .swimmingStrokeCount, .distanceSwimming, .distanceWheelchair, .pushCount,
+                         .distanceDownhillSnowSports, .distanceCrossCountrySkiing, .crossCountrySkiingSpeed,
+                         .distancePaddleSports, .paddleSportsSpeed, .distanceRowing, .rowingSpeed,
+                         .distanceSkatingSports, .appleMoveTime, .appleWalkingSteadiness,
+                         .sixMinuteWalkTestDistance, .walkingSpeed, .walkingStepLength,
+                         .walkingAsymmetryPercentage, .walkingDoubleSupportPercentage,
+                         .stairAscentSpeed, .stairDescentSpeed, .estimatedWorkoutEffortScore,
+                         .workoutEffortScore, .physicalEffort],
+            "sleep": [.sleepAnalysis, .sleepInBed, .sleepAsleep, .sleepAwake, .sleepREM, .sleepCore,
+                      .sleepDeep, .appleSleepingWristTemperature, .appleSleepingBreathingDisturbances],
+            "body": [.weight, .height, .bodyMassIndex, .bodyFatPercentage, .leanBodyMass,
+                     .waistCircumference, .basalBodyTemperature],
+            "reproductive": [.menstrualFlow, .intermenstrualBleeding, .infrequentMenstrualCycles,
+                             .irregularMenstrualCycles, .persistentIntermenstrualBleeding, .prolongedMenstrualPeriods,
+                             .cervicalMucusQuality, .ovulationTestResult, .progesteroneTestResult,
+                             .sexualActivity, .contraceptive, .pregnancy, .pregnancyTestResult, .lactation],
+            "events": [.lowHeartRateEvent, .highHeartRateEvent, .irregularHeartRhythmEvent, .appleStandHour,
+                       .appleWalkingSteadinessEvent, .lowCardioFitnessEvent,
+                       .environmentalAudioExposureEvent, .headphoneAudioExposureEvent],
+            "hearing": [.environmentalAudioExposure, .headphoneAudioExposure, .environmentalSoundReduction],
+            "environment": [.timeInDaylight, .uvExposure, .underwaterDepth, .waterTemperature],
+            "selfCare": [.toothbrushingEvent, .handwashingEvent],
+            "stateOfMind": [.stateOfMind]
+        ]
+        let types: [HealthDataType] = typesString.split(separator: ",").flatMap { token -> [HealthDataType] in
+            let s = String(token).trimmingCharacters(in: .whitespaces)
+            if let categoryTypes = categoryMap[s] { return categoryTypes }
+            if let t = HealthDataType(rawValue: s) { return [t] }
+            return []
+        }
+        if types.isEmpty { throw CLIError.invalidArguments("No valid types") }
+
         if options["--dry-run"] == "true" {
-            print("Dry run: would call /api/v1/health/data for \(typesString)")
+            let expandedList = types.map { $0.rawValue }.joined(separator: ", ")
+            print("Dry run: would call /api/v1/health/data for \(expandedList)")
             return
         }
 
-        // Parse output format (default: csv for easy spreadsheet import)
         let formatString = options["--format"]?.lowercased() ?? "csv"
         let outputFormat: OutputFormat
         switch formatString {
@@ -539,9 +599,6 @@ struct HealthSyncCLI {
         guard let startDate, let endDate else {
             throw CLIError.invalidArguments("Invalid date format")
         }
-
-        let types = typesString.split(separator: ",").compactMap { HealthDataType(rawValue: String($0)) }
-        if types.isEmpty { throw CLIError.invalidArguments("No valid types") }
 
         let (config, token) = try ConfigStore.load()
         let client = HealthSyncClient(host: config.host, port: config.port, token: token, fingerprint: config.fingerprint)
@@ -1136,6 +1193,8 @@ enum HealthDataStatus: String, Codable {
 }
 
 enum HealthDataType: String, CaseIterable, Codable {
+
+    // MARK: - Activity
     case steps
     case distanceWalkingRunning
     case distanceCycling
@@ -1145,6 +1204,43 @@ enum HealthDataType: String, CaseIterable, Codable {
     case standHours
     case flightsClimbed
     case workouts
+    case runningSpeed
+    case runningPower
+    case runningStrideLength
+    case runningGroundContactTime
+    case runningVerticalOscillation
+    case cyclingCadence
+    case cyclingPower
+    case cyclingFunctionalThresholdPower
+    case cyclingSpeed
+    case swimmingStrokeCount
+    case distanceSwimming
+    case distanceWheelchair
+    case pushCount
+    case distanceDownhillSnowSports
+    case distanceCrossCountrySkiing
+    case crossCountrySkiingSpeed
+    case distancePaddleSports
+    case paddleSportsSpeed
+    case distanceRowing
+    case rowingSpeed
+    case distanceSkatingSports
+    case appleMoveTime
+    case estimatedWorkoutEffortScore
+    case workoutEffortScore
+    case physicalEffort
+
+    // MARK: - Mobility (activity subcategory)
+    case appleWalkingSteadiness
+    case sixMinuteWalkTestDistance
+    case walkingSpeed
+    case walkingStepLength
+    case walkingAsymmetryPercentage
+    case walkingDoubleSupportPercentage
+    case stairAscentSpeed
+    case stairDescentSpeed
+
+    // MARK: - Vitals
     case heartRate
     case restingHeartRate
     case walkingHeartRateAverage
@@ -1155,6 +1251,21 @@ enum HealthDataType: String, CaseIterable, Codable {
     case respiratoryRate
     case bodyTemperature
     case vo2Max
+    case heartRateRecoveryOneMinute
+    case atrialFibrillationBurden
+    case bloodGlucose
+    case insulinDelivery
+    case inhalerUsage
+    case numberOfTimesFallen
+    case electrodermalActivity
+    case forcedExpiratoryVolume1
+    case forcedVitalCapacity
+    case peakExpiratoryFlowRate
+    case peripheralPerfusionIndex
+    case bloodAlcoholContent
+    case numberOfAlcoholicBeverages
+
+    // MARK: - Sleep
     case sleepAnalysis
     case sleepInBed
     case sleepAsleep
@@ -1162,9 +1273,141 @@ enum HealthDataType: String, CaseIterable, Codable {
     case sleepREM
     case sleepCore
     case sleepDeep
+    case appleSleepingWristTemperature
+    case appleSleepingBreathingDisturbances
+
+    // MARK: - Body
     case weight
     case height
     case bodyMassIndex
     case bodyFatPercentage
     case leanBodyMass
+    case waistCircumference
+    case basalBodyTemperature
+
+    // MARK: - Environment
+    case timeInDaylight
+    case uvExposure
+    case underwaterDepth
+    case waterTemperature
+
+    // MARK: - Hearing
+    case environmentalAudioExposure
+    case headphoneAudioExposure
+    case environmentalSoundReduction
+
+    // MARK: - Nutrition
+    case dietaryEnergyConsumed
+    case dietaryProtein
+    case dietaryCarbohydrates
+    case dietaryFatTotal
+    case dietaryFatSaturated
+    case dietaryFatMonounsaturated
+    case dietaryFatPolyunsaturated
+    case dietaryFiber
+    case dietarySugar
+    case dietarySodium
+    case dietaryPotassium
+    case dietaryCalcium
+    case dietaryPhosphorus
+    case dietaryMagnesium
+    case dietaryIron
+    case dietaryZinc
+    case dietarySelenium
+    case dietaryChloride
+    case dietaryChromium
+    case dietaryCopper
+    case dietaryIodine
+    case dietaryMolybdenum
+    case dietaryManganese
+    case dietaryNiacin
+    case dietaryRiboflavin
+    case dietaryThiamin
+    case dietaryPantothenicAcid
+    case dietaryBiotin
+    case dietaryFolate
+    case dietaryVitaminA
+    case dietaryVitaminB6
+    case dietaryVitaminB12
+    case dietaryVitaminC
+    case dietaryVitaminD
+    case dietaryVitaminE
+    case dietaryVitaminK
+    case dietaryCaffeine
+    case dietaryWater
+    case dietaryCholesterol
+
+    // MARK: - Symptoms
+    case abdominalCramps
+    case bloating
+    case constipation
+    case diarrhea
+    case heartburn
+    case nausea
+    case vomiting
+    case appetiteChanges
+    case chills
+    case dizziness
+    case fainting
+    case fatigue
+    case fever
+    case generalizedBodyAche
+    case hotFlashes
+    case chestTightnessOrPain
+    case coughing
+    case rapidPoundingOrFlutteringHeartbeat
+    case shortnessOfBreath
+    case skippedHeartbeat
+    case wheezing
+    case lowerBackPain
+    case headache
+    case memoryLapse
+    case moodChanges
+    case lossOfSmell
+    case lossOfTaste
+    case runnyNose
+    case soreThroat
+    case sinusCongestion
+    case breastPain
+    case pelvicPain
+    case vaginalDryness
+    case acne
+    case drySkin
+    case hairLoss
+    case nightSweats
+    case sleepChanges
+    case bladderIncontinence
+
+    // MARK: - Events
+    case lowHeartRateEvent
+    case highHeartRateEvent
+    case irregularHeartRhythmEvent
+    case appleStandHour
+    case appleWalkingSteadinessEvent
+    case lowCardioFitnessEvent
+    case environmentalAudioExposureEvent
+    case headphoneAudioExposureEvent
+
+    // MARK: - Reproductive
+    case menstrualFlow
+    case intermenstrualBleeding
+    case infrequentMenstrualCycles
+    case irregularMenstrualCycles
+    case persistentIntermenstrualBleeding
+    case prolongedMenstrualPeriods
+    case cervicalMucusQuality
+    case ovulationTestResult
+    case progesteroneTestResult
+    case sexualActivity
+    case contraceptive
+    case pregnancy
+    case pregnancyTestResult
+    case lactation
+
+    // MARK: - Self Care
+    case toothbrushingEvent
+    case handwashingEvent
+
+    // MARK: - State of Mind
+    case stateOfMind
 }
