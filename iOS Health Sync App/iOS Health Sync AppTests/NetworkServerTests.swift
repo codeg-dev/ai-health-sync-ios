@@ -10,9 +10,14 @@ import Testing
 
 struct TestHealthDataProvider: HealthDataProviding, Sendable {
     let response: HealthDataResponse
+    var writeResponse: HealthWriteResponse = HealthWriteResponse(success: 0, failed: 0, errors: [])
 
     func fetchSamples(types: [HealthDataType], startDate: Date, endDate: Date, limit: Int, offset: Int) async -> HealthDataResponse {
         response
+    }
+
+    func saveSamples(_ request: HealthWriteRequest) async throws -> HealthWriteResponse {
+        writeResponse
     }
 }
 
@@ -113,12 +118,13 @@ enum CLIError: Error {
 func makeServer(
     container: ModelContainer,
     healthResponse: HealthDataResponse,
+    writeResponse: HealthWriteResponse = HealthWriteResponse(success: 0, failed: 0, errors: []),
     protectedData: @escaping @Sendable () async -> Bool,
     deviceName: String = "Test Device",
     identityProvider: @escaping @Sendable () throws -> TLSIdentity = { try CertificateService.loadOrCreateIdentity() },
     listenerPort: NWEndpoint.Port? = nil
 ) -> (NetworkServer, PairingService, AuditService) {
-    let healthProvider = TestHealthDataProvider(response: healthResponse)
+    let healthProvider = TestHealthDataProvider(response: healthResponse, writeResponse: writeResponse)
     let pairingService = PairingService(modelContainer: container)
     let auditService = AuditService(modelContainer: container)
     let server = NetworkServer(
@@ -641,4 +647,91 @@ func modelContainerCreatesWithMigrationPlan() throws {
     let fetched = try context.fetch(descriptor)
     #expect(fetched.count == 1)
     #expect(fetched.first?.enabledTypes == [.steps])
+}
+
+@Test
+func testHealthWrite_validRequest_returns200() async throws {
+    let container = try await makeInMemoryContainer(enabledTypes: [.steps])
+    let writeResponse = HealthWriteResponse(success: 1, failed: 0, errors: [])
+    let (server, pairingService, _) = makeServer(
+        container: container,
+        healthResponse: HealthDataResponse(status: .ok, samples: [], message: nil, hasMore: false, returnedCount: 0),
+        writeResponse: writeResponse,
+        protectedData: { true }
+    )
+    let token = try await performPairing(on: server, pairingService: pairingService)
+    let meal = NutritionWriteDTO(
+        id: 1,
+        name: "닭가슴살",
+        eatenAt: Date(),
+        calories: 250,
+        proteinG: 45,
+        carbsG: 5,
+        fatG: 3,
+        fiberG: 0,
+        sodiumMg: 60,
+        sugarG: 0
+    )
+    let writeRequest = HealthWriteRequest(meals: [meal])
+    let request = HTTPRequest(
+        method: "POST",
+        path: "/api/v1/health/write",
+        headers: ["Authorization": "Bearer \(token)", "Content-Type": "application/json"],
+        body: makeJSONBody(writeRequest)
+    )
+    let response = await server.route(request)
+    #expect(response.statusCode == 200)
+    let result = try decodeJSON(HealthWriteResponse.self, from: response.body)
+    #expect(result.success == 1)
+    #expect(result.failed == 0)
+}
+
+@Test
+func testHealthWriteInvalid_badJSON_returns400() async throws {
+    let container = try await makeInMemoryContainer(enabledTypes: [.steps])
+    let (server, pairingService, _) = makeServer(
+        container: container,
+        healthResponse: HealthDataResponse(status: .ok, samples: [], message: nil, hasMore: false, returnedCount: 0),
+        protectedData: { true }
+    )
+    let token = try await performPairing(on: server, pairingService: pairingService)
+    let request = HTTPRequest(
+        method: "POST",
+        path: "/api/v1/health/write",
+        headers: ["Authorization": "Bearer \(token)", "Content-Type": "application/json"],
+        body: Data("not valid json".utf8)
+    )
+    let response = await server.route(request)
+    #expect(response.statusCode == 400)
+}
+
+@Test
+func testHealthWrite_unauthorized_returns401() async throws {
+    let container = try await makeInMemoryContainer(enabledTypes: [.steps])
+    let (server, _, _) = makeServer(
+        container: container,
+        healthResponse: HealthDataResponse(status: .ok, samples: [], message: nil, hasMore: false, returnedCount: 0),
+        protectedData: { true }
+    )
+    let meal = NutritionWriteDTO(
+        id: 1,
+        name: "Test",
+        eatenAt: Date(),
+        calories: 100,
+        proteinG: 10,
+        carbsG: 10,
+        fatG: 5,
+        fiberG: 0,
+        sodiumMg: 0,
+        sugarG: 0
+    )
+    let writeRequest = HealthWriteRequest(meals: [meal])
+    let request = HTTPRequest(
+        method: "POST",
+        path: "/api/v1/health/write",
+        headers: ["Content-Type": "application/json"],
+        body: makeJSONBody(writeRequest)
+    )
+    let response = await server.route(request)
+    #expect(response.statusCode == 401)
 }

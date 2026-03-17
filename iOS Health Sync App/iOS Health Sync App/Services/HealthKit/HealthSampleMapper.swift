@@ -231,6 +231,44 @@ struct HealthSampleMapper {
         return ["sleepStage": stage]
     }
 
+    static func createNutritionCorrelation(from dto: NutritionWriteDTO) throws -> HKCorrelation {
+        let start = dto.eatenAt
+        let end = dto.eatenAt.addingTimeInterval(1)
+
+        let nutrients: [(HKQuantityTypeIdentifier, HKUnit, Double)] = [
+            (.dietaryEnergyConsumed, .kilocalorie(), dto.calories),
+            (.dietaryProtein, .gram(), dto.proteinG),
+            (.dietaryCarbohydrates, .gram(), dto.carbsG),
+            (.dietaryFatTotal, .gram(), dto.fatG),
+            (.dietaryFiber, .gram(), dto.fiberG),
+            (.dietarySodium, .gramUnit(with: .milli), dto.sodiumMg),
+            (.dietarySugar, .gram(), dto.sugarG)
+        ]
+
+        var samples = Set<HKSample>()
+        for (identifier, unit, value) in nutrients {
+            let quantityType = HKQuantityType(identifier)
+            let quantity = HKQuantity(unit: unit, doubleValue: value)
+            let sample = HKQuantitySample(type: quantityType, quantity: quantity, start: start, end: end)
+            samples.insert(sample)
+        }
+
+        let metadata: [String: Any] = [
+            HKMetadataKeySyncIdentifier: "vitalery-meal-\(dto.id)",
+            HKMetadataKeySyncVersion: 1,
+            HKMetadataKeyWasUserEntered: true,
+            HKMetadataKeyFoodType: dto.name
+        ]
+
+        return HKCorrelation(
+            type: HKCorrelationType(.food),
+            start: start,
+            end: end,
+            objects: samples,
+            metadata: metadata
+        )
+    }
+
     private static func activeEnergyKilocalories(for workout: HKWorkout) -> Double? {
         if #available(iOS 18.0, *) {
             let quantityType = HKQuantityType(.activeEnergyBurned)

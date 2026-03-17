@@ -67,3 +67,26 @@ struct PairingQRCode: Codable, Sendable {
     let expiresAt: Date
     let certificateFingerprint: String
 }
+
+struct NutritionWriteDTO: Codable, Sendable {
+    let id: Int
+    let name: String
+    let eatenAt: Date
+    let calories: Double
+    let proteinG: Double
+    let carbsG: Double
+    let fatG: Double
+    let fiberG: Double
+    let sodiumMg: Double
+    let sugarG: Double
+}
+
+struct HealthWriteRequest: Codable, Sendable {
+    let meals: [NutritionWriteDTO]
+}
+
+struct HealthWriteResponse: Codable, Sendable {
+    let success: Int
+    let failed: Int
+    let errors: [String]
+}

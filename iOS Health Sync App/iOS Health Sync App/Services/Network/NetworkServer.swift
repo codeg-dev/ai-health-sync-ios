@@ -152,6 +152,8 @@ actor NetworkServer {
             return await handleTypes(requestId: requestId)
         case ("POST", "/api/v1/health/data"):
             return await handleHealthData(request, requestId: requestId)
+        case ("POST", "/api/v1/health/write"):
+            return await handleHealthWrite(request, requestId: requestId)
         default:
             return HTTPResponse.plain(statusCode: 404, reason: "Not Found", message: "Unknown route")
         }
@@ -294,6 +296,48 @@ actor NetworkServer {
             await updateLastExport()
         }
         return HTTPResponse.json(statusCode: 200, body: result)
+    }
+
+    private func handleHealthWrite(_ request: HTTPRequest, requestId: String) async -> HTTPResponse {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let payload: HealthWriteRequest
+        do {
+            payload = try decoder.decode(HealthWriteRequest.self, from: request.body)
+        } catch {
+            await auditService.record(eventType: "api.request_invalid", details: [
+                "path": "/api/v1/health/write",
+                "reason": "decode_error",
+                "requestId": requestId
+            ])
+            return HTTPResponse.plain(statusCode: 400, reason: "Bad Request", message: "Invalid request body")
+        }
+
+        if payload.meals.isEmpty {
+            await auditService.record(eventType: "api.request_invalid", details: [
+                "path": "/api/v1/health/write",
+                "reason": "empty_meals",
+                "requestId": requestId
+            ])
+            return HTTPResponse.plain(statusCode: 400, reason: "Bad Request", message: "No meals provided")
+        }
+
+        do {
+            let response = try await healthService.saveSamples(payload)
+            await auditService.record(eventType: "data.write", details: [
+                "success": String(response.success),
+                "failed": String(response.failed),
+                "requestId": requestId
+            ])
+            return HTTPResponse.json(statusCode: 200, body: response)
+        } catch {
+            await auditService.record(eventType: "api.request_error", details: [
+                "path": "/api/v1/health/write",
+                "error": error.localizedDescription,
+                "requestId": requestId
+            ])
+            return HTTPResponse.plain(statusCode: 500, reason: "Internal Server Error", message: "Failed to save samples")
+        }
     }
 
     private func loadEnabledTypes() async -> [HealthDataType] {

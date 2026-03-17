@@ -528,3 +528,81 @@ struct BonjourDiscoveryTests {
         #expect(elapsed < 1.5, "Discovery took \(elapsed)s, expected < 1.5s")
     }
 }
+
+@Suite("Push Command")
+struct PushCommandTests {
+    @Test("Decodes Vitalery export JSON with snake_case keys")
+    func decodesVitaleryExportJSON() throws {
+        let json = """
+        [
+          {
+            "id": 1,
+            "name": "테스트 식사",
+            "calories": 500,
+            "protein_g": 30,
+            "carbs_g": 50,
+            "fat_g": 20,
+            "fiber_g": 5,
+            "sodium_mg": 800,
+            "sugar_g": 10,
+            "eaten_at": "2026-03-17T12:00:00"
+          }
+        ]
+        """
+
+        let meals = try HealthSyncCLI.decodeNutritionMeals(from: Data(json.utf8))
+
+        #expect(meals.count == 1)
+        #expect(meals[0].id == 1)
+        #expect(meals[0].name == "테스트 식사")
+        #expect(meals[0].calories == 500)
+        #expect(meals[0].proteinG == 30)
+        #expect(meals[0].carbsG == 50)
+        #expect(meals[0].fatG == 20)
+        #expect(meals[0].fiberG == 5)
+        #expect(meals[0].sodiumMg == 800)
+        #expect(meals[0].sugarG == 10)
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        #expect(meals[0].eatenAt == formatter.date(from: "2026-03-17T12:00:00"))
+    }
+
+    @Test("Dry-run output summarizes parsed meals")
+    func dryRunOutputSummarizesParsedMeals() {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+
+        let meals = [
+            NutritionWriteDTO(
+                id: 1,
+                name: "닭가슴살",
+                eatenAt: formatter.date(from: "2026-03-17T12:00:00")!,
+                calories: 500,
+                proteinG: 30,
+                carbsG: 50,
+                fatG: 20,
+                fiberG: 5,
+                sodiumMg: 800,
+                sugarG: 10
+            )
+        ]
+
+        let output = HealthSyncCLI.pushDryRunOutput(meals: meals)
+
+        #expect(output.contains("Parsed 1 meal(s) to sync:"))
+        #expect(output.contains("[1] 닭가슴살 2026-03-17T12:00:00 (500 kcal)"))
+        #expect(output.contains("Dry run: no data sent."))
+    }
+
+    @Test("Usage text documents push command")
+    func usageTextDocumentsPushCommand() {
+        let text = HealthSyncCLI.usageText()
+        #expect(text.contains("push --input <path> [--dry-run] [--host <ip>]"))
+        #expect(text.contains("Send nutrition data to Apple Health via iOS app"))
+    }
+}

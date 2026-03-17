@@ -19,7 +19,7 @@
 	<key>NSHealthShareUsageDescription</key>
 	<string>HealthSync needs read access to your Health data to share selected metrics with your Mac over your local network.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>HealthSync does not write Health data. This permission is required by HealthKit to manage access.</string>
+	<string>Vitalery에서 기록한 식단 영양정보를 Apple Health에 저장합니다.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>HealthSync uses your local network to share Health data with your Mac.</string>
 	<key>UILaunchScreen</key>

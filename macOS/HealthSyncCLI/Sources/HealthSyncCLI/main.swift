@@ -82,6 +82,8 @@ struct HealthSyncCLI {
             try await types(args: args)
         case "fetch":
             try await fetch(args: args)
+        case "push":
+            try await push(args: args)
         default:
             try usage()
         }
@@ -102,7 +104,11 @@ struct HealthSyncCLI {
     }
 
     static func usage() throws {
-        let text = """
+        print(usageText())
+    }
+
+    static func usageText() -> String {
+        """
         HealthSyncCLI v\(cliVersion)
         Securely sync Apple HealthKit data from iPhone to Mac over local network.
 
@@ -120,6 +126,8 @@ struct HealthSyncCLI {
           status [--dry-run]               Fetch server status
           types [--dry-run]                Fetch enabled data types
           fetch --start <iso> --end <iso> --types <list> [--format csv|json] [--dry-run]  (default: csv)
+          push --input <path> [--dry-run] [--host <ip>]
+                                      Send nutrition data to Apple Health via iOS app
           version, --version, -v           Show version information
 
         QUICK START:
@@ -137,7 +145,18 @@ struct HealthSyncCLI {
         MORE INFO:
           https://github.com/mneves75/ai-health-sync-ios
         """
-        print(text)
+    }
+
+    static func pushHelpText() -> String {
+        """
+        USAGE:
+          healthsync push --input <path> [--dry-run] [--host <ip>]
+
+        OPTIONS:
+          --input <path>    Path to Vitalery export JSON file
+          --dry-run         Parse and print meals without sending
+          --host <ip>       Override paired iPhone host from config
+        """
     }
 
     static func discover(args: [String]) async throws {
@@ -663,6 +682,112 @@ struct HealthSyncCLI {
             print("\(sample.id);\(sample.type);\(sample.value);\(sample.unit);\(startDateStr);\(endDateStr);\(escapedSource)")
         }
     }
+
+    static func push(args: [String]) async throws {
+        let options = try parseOptions(args)
+
+        if options["--help"] == "true" || options["-h"] == "true" {
+            print(pushHelpText())
+            return
+        }
+
+        guard let inputPath = options["--input"] else {
+            throw CLIError.invalidArguments("Missing push arguments: --input <path> is required")
+        }
+
+        if let overrideHost = options["--host"], !isLocalNetworkHost(overrideHost) {
+            throw CLIError.invalidArguments("Host must be on local network (got: \(overrideHost))")
+        }
+
+        let data = try Data(contentsOf: URL(fileURLWithPath: inputPath))
+        let meals = try decodeNutritionMeals(from: data)
+
+        if options["--dry-run"] == "true" {
+            print(pushDryRunOutput(meals: meals))
+            return
+        }
+
+        let (storedConfig, token) = try ConfigStore.load()
+        let host = options["--host"] ?? storedConfig.host
+        let client = HealthSyncClient(host: host, port: storedConfig.port, token: token, fingerprint: storedConfig.fingerprint)
+        let request = HealthWriteRequest(meals: meals)
+        let response: HealthWriteResponse = try await client.send(path: "/api/v1/health/write", method: "POST", body: request, authorized: true)
+
+        print(pushResponseOutput(response))
+    }
+
+    static func decodeNutritionMeals(from data: Data) throws -> [NutritionWriteDTO] {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+
+            let iso8601Formatter = ISO8601DateFormatter()
+            iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = iso8601Formatter.date(from: value) {
+                return date
+            }
+
+            let fallbackISO8601Formatter = ISO8601DateFormatter()
+            fallbackISO8601Formatter.formatOptions = [.withInternetDateTime]
+            if let date = fallbackISO8601Formatter.date(from: value) {
+                return date
+            }
+
+            let localFormatter = DateFormatter()
+            localFormatter.locale = Locale(identifier: "en_US_POSIX")
+            localFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+            localFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+            if let date = localFormatter.date(from: value) {
+                return date
+            }
+
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO 8601 date: \(value)")
+        }
+        return try decoder.decode([NutritionWriteDTO].self, from: data)
+    }
+
+    static func pushDryRunOutput(meals: [NutritionWriteDTO]) -> String {
+        var lines = ["Parsed \(meals.count) meal(s) to sync:"]
+        for (index, meal) in meals.enumerated() {
+            lines.append("  [\(index + 1)] \(meal.name) \(formatPushDate(meal.eatenAt)) (\(formatKcal(meal.calories)) kcal)")
+        }
+        lines.append("Dry run: no data sent.")
+        return lines.joined(separator: "\n")
+    }
+
+    static func pushResponseOutput(_ response: HealthWriteResponse) -> String {
+        var lines = [
+            "Push complete.",
+            "  Success: \(response.success)",
+            "  Failed: \(response.failed)"
+        ]
+
+        if !response.errors.isEmpty {
+            lines.append("  Errors:")
+            for error in response.errors {
+                lines.append("    - \(error)")
+            }
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private static func formatPushDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return formatter.string(from: date)
+    }
+
+    private static func formatKcal(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+        return String(format: "%.1f", value)
+    }
 }
 
 struct ConfigStore {
@@ -1172,6 +1297,29 @@ struct PairRequest: Codable {
 struct PairResponse: Codable {
     let token: String
     let expiresAt: Date
+}
+
+struct NutritionWriteDTO: Codable {
+    let id: Int
+    let name: String
+    let eatenAt: Date
+    let calories: Double
+    let proteinG: Double
+    let carbsG: Double
+    let fatG: Double
+    let fiberG: Double
+    let sodiumMg: Double
+    let sugarG: Double
+}
+
+struct HealthWriteRequest: Codable {
+    let meals: [NutritionWriteDTO]
+}
+
+struct HealthWriteResponse: Codable {
+    let success: Int
+    let failed: Int
+    let errors: [String]
 }
 
 struct HealthSampleDTO: Codable {

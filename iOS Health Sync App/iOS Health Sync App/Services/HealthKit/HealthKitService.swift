@@ -7,9 +7,20 @@ import os
 
 protocol HealthDataProviding: Sendable {
     func fetchSamples(types: [HealthDataType], startDate: Date, endDate: Date, limit: Int, offset: Int) async -> HealthDataResponse
+    func saveSamples(_ request: HealthWriteRequest) async throws -> HealthWriteResponse
 }
 
 actor HealthKitService {
+    static let nutritionWriteTypes: [HealthDataType] = [
+        .dietaryEnergyConsumed,
+        .dietaryProtein,
+        .dietaryCarbohydrates,
+        .dietaryFatTotal,
+        .dietaryFiber,
+        .dietarySodium,
+        .dietarySugar
+    ]
+
     private let store: HealthStoreProtocol
 
     init(store: HealthStoreProtocol = HKHealthStore()) {
@@ -31,6 +42,86 @@ actor HealthKitService {
                 continuation.resume(returning: success)
             }
         }
+    }
+
+    func requestWriteAuthorization(for nutritionTypes: [HealthDataType]) async throws -> Bool {
+        let shareTypes = Set(await MainActor.run { nutritionTypes.compactMap { $0.sampleType } })
+        return try await withCheckedThrowingContinuation { continuation in
+            store.requestAuthorization(toShare: shareTypes, read: []) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                continuation.resume(returning: success)
+            }
+        }
+    }
+
+    func saveSamples(_ request: HealthWriteRequest) async throws -> HealthWriteResponse {
+        var successCount = 0
+        var failedCount = 0
+        var errors: [String] = []
+
+        for meal in request.meals {
+            do {
+                let correlation = try buildNutritionCorrelation(from: meal)
+                try await store.save([correlation])
+                successCount += 1
+            } catch {
+                failedCount += 1
+                errors.append(error.localizedDescription)
+            }
+        }
+
+        return HealthWriteResponse(success: successCount, failed: failedCount, errors: errors)
+    }
+
+    private func buildNutritionCorrelation(from meal: NutritionWriteDTO) throws -> HKCorrelation {
+        let metadata: [String: Any] = [
+            HKMetadataKeySyncIdentifier: "vitalery-meal-\(meal.id)",
+            HKMetadataKeySyncVersion: NSNumber(value: 1),
+            HKMetadataKeyWasUserEntered: NSNumber(value: true),
+            HKMetadataKeyFoodType: meal.name
+        ]
+
+        let samples: Set<HKSample> = [
+            HKQuantitySample(
+                type: HKQuantityType(.dietaryEnergyConsumed),
+                quantity: HKQuantity(unit: .kilocalorie(), doubleValue: meal.calories),
+                start: meal.eatenAt, end: meal.eatenAt, metadata: metadata),
+            HKQuantitySample(
+                type: HKQuantityType(.dietaryProtein),
+                quantity: HKQuantity(unit: .gram(), doubleValue: meal.proteinG),
+                start: meal.eatenAt, end: meal.eatenAt, metadata: metadata),
+            HKQuantitySample(
+                type: HKQuantityType(.dietaryCarbohydrates),
+                quantity: HKQuantity(unit: .gram(), doubleValue: meal.carbsG),
+                start: meal.eatenAt, end: meal.eatenAt, metadata: metadata),
+            HKQuantitySample(
+                type: HKQuantityType(.dietaryFatTotal),
+                quantity: HKQuantity(unit: .gram(), doubleValue: meal.fatG),
+                start: meal.eatenAt, end: meal.eatenAt, metadata: metadata),
+            HKQuantitySample(
+                type: HKQuantityType(.dietaryFiber),
+                quantity: HKQuantity(unit: .gram(), doubleValue: meal.fiberG),
+                start: meal.eatenAt, end: meal.eatenAt, metadata: metadata),
+            HKQuantitySample(
+                type: HKQuantityType(.dietarySodium),
+                quantity: HKQuantity(unit: .gram(), doubleValue: meal.sodiumMg / 1000),
+                start: meal.eatenAt, end: meal.eatenAt, metadata: metadata),
+            HKQuantitySample(
+                type: HKQuantityType(.dietarySugar),
+                quantity: HKQuantity(unit: .gram(), doubleValue: meal.sugarG),
+                start: meal.eatenAt, end: meal.eatenAt, metadata: metadata)
+        ]
+
+        return HKCorrelation(
+            type: HKCorrelationType(.food),
+            start: meal.eatenAt,
+            end: meal.eatenAt,
+            objects: samples,
+            metadata: metadata
+        )
     }
 
     /// NOTE: authorizationStatus only works for WRITE permissions.
