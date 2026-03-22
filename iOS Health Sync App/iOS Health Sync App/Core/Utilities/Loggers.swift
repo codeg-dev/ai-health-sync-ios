@@ -14,6 +14,7 @@ enum LogCategory {
     static let network = "network"
     static let security = "security"
     static let audit = "audit"
+    static let sync = "sync"
 }
 
 struct AppLoggers {
@@ -22,4 +23,5 @@ struct AppLoggers {
     static let network = Logger(subsystem: LogSubsystem.app, category: LogCategory.network)
     static let security = Logger(subsystem: LogSubsystem.app, category: LogCategory.security)
     static let audit = Logger(subsystem: LogSubsystem.app, category: LogCategory.audit)
+    static let sync = Logger(subsystem: LogSubsystem.app, category: LogCategory.sync)
 }
