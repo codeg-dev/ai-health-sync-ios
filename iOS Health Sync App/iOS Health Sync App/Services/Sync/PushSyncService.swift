@@ -23,10 +23,15 @@ actor PushSyncService: NSObject, URLSessionDataDelegate, PushSyncServicing {
         self.session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
     }
 
-    convenience init(apiKey: String) {
+    init(apiKey: String) {
         let rawURL = UserDefaults.standard.string(forKey: "serverURL") ?? "http://100.95.234.69:18810"
-        let url = URL(string: rawURL) ?? URL(string: "http://100.95.234.69:18810")!
-        self.init(serverURL: url, apiKey: apiKey)
+        self.serverURL = URL(string: rawURL) ?? URL(string: "http://100.95.234.69:18810")!
+        self.apiKey = apiKey
+        super.init()
+        let config = URLSessionConfiguration.background(withIdentifier: Self.sessionIdentifier)
+        config.isDiscretionary = false
+        config.sessionSendsLaunchEvents = true
+        self.session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
     }
 
     func upload(domain: String, records: [HealthSampleDTO]) async throws -> PushResponse {

@@ -24,16 +24,14 @@ final class MockPushSyncService: PushSyncServicing, @unchecked Sendable {
 @Test
 func pushSyncServiceCanBeCreated() {
     let url = URL(string: "http://localhost:18810")!
-    let service = PushSyncService(serverURL: url, apiKey: "test-key")
-    #expect(service != nil)
+    let _ = PushSyncService(serverURL: url, apiKey: "test-key")
 }
 
 @Test
 func pushSyncServiceUsesUserDefaultsURL() {
     UserDefaults.standard.set("http://192.168.1.1:18810", forKey: "serverURL")
     defer { UserDefaults.standard.removeObject(forKey: "serverURL") }
-    let service = PushSyncService(apiKey: "test-key")
-    #expect(service != nil)
+    let _ = PushSyncService(apiKey: "test-key")
 }
 
 @Test
