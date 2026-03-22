@@ -1,0 +1,33 @@
+Task 7 Evidence - NWListener server removal
+
+Date: 2026-03-22
+Repo: /Users/codeg/github/healthsync-vitalery
+
+Deleted files:
+- iOS Health Sync App/iOS Health Sync App/Services/Network/NetworkServer.swift
+- iOS Health Sync App/iOS Health Sync App/Core/Background/BackgroundTaskController.swift
+- iOS Health Sync App/iOS Health Sync AppTests/NetworkServerTests.swift
+- iOS Health Sync App/iOS Health Sync AppTests/BackgroundTaskControllerTests.swift
+
+App cleanup:
+- Removed AppState server lifecycle and server state properties.
+- Removed ContentView sharing server and QR pairing UI.
+- Kept Services/Network/HTTPTypes.swift.
+- Kept security and pairing infrastructure for push reuse.
+
+Verification:
+1) Requested destination check
+   - `xcodebuild build -project "iOS Health Sync App/iOS Health Sync App.xcodeproj" -scheme "iOS Health Sync App" -destination 'platform=iOS Simulator,name=iPhone 16'`
+   - Result: failed because `iPhone 16` simulator is not installed on this machine.
+
+2) Build with available simulator
+   - `xcodebuild build -project "iOS Health Sync App/iOS Health Sync App.xcodeproj" -scheme "iOS Health Sync App" -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2'`
+   - Result: `BUILD SUCCEEDED`
+
+3) Symbol grep
+   - `grep -r "NWListener\|NetworkServer\|BackgroundTaskController" "iOS Health Sync App/iOS Health Sync App/" --include="*.swift"`
+   - Result: no matches
+
+4) SourceKit diagnostics
+   - `lsp_diagnostics` for this iOS workspace reports broad unresolved-symbol and UIKit false positives across the project in this environment.
+   - `xcodebuild` was used as the authoritative validation step for compile correctness.
