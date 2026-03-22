@@ -104,6 +104,9 @@ actor HealthKitObserverService {
         do {
             _ = try await pushService.upload(domain: "vitals", records: dtos)
             anchorPersistence.saveAnchor(newAnchor, for: sampleType)
+            if result.samples.count >= Self.defaultBatchLimit {
+                await fetchAndUpload(sampleType: sampleType, anchor: newAnchor)
+            }
         } catch {
             AppLoggers.sync.error("Upload failed for \(sampleType.identifier, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }

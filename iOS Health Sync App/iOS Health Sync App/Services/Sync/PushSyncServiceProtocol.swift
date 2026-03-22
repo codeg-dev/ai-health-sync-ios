@@ -15,6 +15,10 @@ struct PushResponse: Codable, Sendable, Equatable {
     }
 }
 
+enum PushSyncError: Error, Equatable {
+    case invalidServerURL
+}
+
 protocol PushSyncServicing: Sendable {
     func upload(domain: String, records: [HealthSampleDTO]) async throws -> PushResponse
 }

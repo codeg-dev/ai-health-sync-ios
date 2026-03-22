@@ -63,7 +63,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             effectivePushService = injected
         } else {
             let apiKey = UserDefaults.standard.string(forKey: "pushAPIKey") ?? ""
-            effectivePushService = PushSyncService(apiKey: apiKey)
+            do {
+                effectivePushService = try PushSyncService(apiKey: apiKey)
+            } catch {
+                AppLoggers.sync.error("Invalid server URL — configure serverURL in Settings: \(error.localizedDescription, privacy: .public)")
+                return
+            }
         }
 
         let svc = HealthKitObserverService(

@@ -23,9 +23,12 @@ actor PushSyncService: NSObject, URLSessionDataDelegate, PushSyncServicing {
         self.session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
     }
 
-    init(apiKey: String) {
-        let rawURL = UserDefaults.standard.string(forKey: "serverURL") ?? "http://100.95.234.69:18810"
-        self.serverURL = URL(string: rawURL) ?? URL(string: "http://100.95.234.69:18810")!
+    init(apiKey: String) throws {
+        let serverURLString = UserDefaults.standard.string(forKey: "serverURL") ?? ""
+        guard let serverURL = URL(string: serverURLString), !serverURLString.isEmpty else {
+            throw PushSyncError.invalidServerURL
+        }
+        self.serverURL = serverURL
         self.apiKey = apiKey
         super.init()
         let config = URLSessionConfiguration.background(withIdentifier: Self.sessionIdentifier)

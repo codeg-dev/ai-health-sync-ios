@@ -28,10 +28,18 @@ func pushSyncServiceCanBeCreated() {
 }
 
 @Test
-func pushSyncServiceUsesUserDefaultsURL() {
+func pushSyncServiceUsesUserDefaultsURL() throws {
     UserDefaults.standard.set("http://192.168.1.1:18810", forKey: "serverURL")
     defer { UserDefaults.standard.removeObject(forKey: "serverURL") }
-    let _ = PushSyncService(apiKey: "test-key")
+    let _ = try PushSyncService(apiKey: "test-key")
+}
+
+@Test
+func pushSyncServiceThrowsWhenNoServerURL() {
+    UserDefaults.standard.removeObject(forKey: "serverURL")
+    #expect(throws: PushSyncError.invalidServerURL) {
+        try PushSyncService(apiKey: "test-key")
+    }
 }
 
 @Test
