@@ -7,6 +7,8 @@ import SwiftUI
 
 @main
 struct iOS_Health_Sync_AppApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
     private let modelContainer: ModelContainer
     @State private var appState: AppState
 
