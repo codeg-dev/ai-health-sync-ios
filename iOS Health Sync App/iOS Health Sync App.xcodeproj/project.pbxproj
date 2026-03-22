@@ -12,6 +12,7 @@
 		C3D4E5F6A7B8C9D0E1F2A3B4 /* HealthSampleMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* HealthSampleMapperTests.swift */; };
 		E942FC38CBA1FE8D92BA26C5 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E783B0113212E3B6B6587A3 /* XCTest.framework */; };
 		BB2345678901ABCDEF012346 /* PushSyncServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2345678901ABCDEF012346 /* PushSyncServiceTests.swift */; };
+		FF4567890ABCDEF012345678 /* HealthKitObserverServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE4567890ABCDEF012345678 /* HealthKitObserverServiceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		E704AEA35314C91E7E7D7F39 /* HealthKitServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitServiceTests.swift; sourceTree = "<group>"; };
 		F1E2D3C4B5A6978899A0B1C2 /* DEREncoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DEREncoderTests.swift; sourceTree = "<group>"; };
 		CC2345678901ABCDEF012346 /* PushSyncServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/PushSyncServiceTests.swift; sourceTree = "<group>"; };
+		EE4567890ABCDEF012345678 /* HealthKitObserverServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HealthKitObserverServiceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -95,6 +97,7 @@
 				E704AEA35314C91E7E7D7F39 /* HealthKitServiceTests.swift */,
 				D4E5F6A7B8C9D0E1F2A3B4C5 /* HealthSampleMapperTests.swift */,
 				CC2345678901ABCDEF012346 /* PushSyncServiceTests.swift */,
+				EE4567890ABCDEF012345678 /* HealthKitObserverServiceTests.swift */,
 			);
 			path = "iOS Health Sync AppTests";
 			sourceTree = "<group>";
@@ -214,6 +217,7 @@
 				829EC355C65512A119A55B04 /* HealthKitServiceTests.swift in Sources */,
 				C3D4E5F6A7B8C9D0E1F2A3B4 /* HealthSampleMapperTests.swift in Sources */,
 				BB2345678901ABCDEF012346 /* PushSyncServiceTests.swift in Sources */,
+				FF4567890ABCDEF012345678 /* HealthKitObserverServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
