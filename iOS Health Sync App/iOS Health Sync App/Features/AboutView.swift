@@ -53,9 +53,8 @@ struct AboutView: View {
 
             // Features Section
             Section("Features") {
-                FeatureRow(icon: "lock.shield.fill", color: .green, title: "Secure by Design", description: "TLS 1.3 encryption with certificate pinning")
+                FeatureRow(icon: "lock.shield.fill", color: .green, title: "Secure by Design", description: "TLS 1.3 encryption")
                 FeatureRow(icon: "wifi", color: .blue, title: "Local Network Only", description: "No cloud services, data stays on your devices")
-                FeatureRow(icon: "qrcode", color: .purple, title: "Easy Pairing", description: "Scan a QR code to securely connect")
                 FeatureRow(icon: "heart.fill", color: .pink, title: "HealthKit Integration", description: "Steps, heart rate, sleep, workouts, and more")
             }
 
@@ -81,8 +80,6 @@ struct AboutView: View {
             Section("Acknowledgments") {
                 VStack(alignment: .leading, spacing: 12) {
                     AcknowledgmentRow(title: "Apple HealthKit", description: "Health data framework")
-                    AcknowledgmentRow(title: "Apple Network Framework", description: "TLS server and Bonjour discovery")
-                    AcknowledgmentRow(title: "Apple Vision Framework", description: "QR code detection")
                     AcknowledgmentRow(title: "SwiftUI & SwiftData", description: "Modern Apple UI and persistence")
                 }
             }

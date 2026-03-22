@@ -35,12 +35,24 @@ struct ContentView: View {
 
     private var statusSection: some View {
         Section("Status") {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Background Sync")
+                    .font(.headline)
+                if let lastExport = appState.syncConfiguration.lastExportAt {
+                    Text("Last sync: \(lastExport.formatted())")
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("Last sync: Never")
+                        .foregroundColor(.secondary)
+                }
+                Text("Status: Active")
+                    .foregroundColor(.green)
+            }
+            .padding(.vertical, 4)
+
             LabeledContent("Version", value: appVersion)
             LabeledContent("Protected Data", value: appState.protectedDataAvailable ? "Available" : "Locked")
             LabeledContent("HealthKit", value: appState.healthAuthorizationStatus ? "Requested" : "Not Requested")
-            if let lastExport = appState.syncConfiguration.lastExportAt {
-                LabeledContent("Last Export", value: lastExport.formatted())
-            }
         }
     }
 
@@ -72,17 +84,6 @@ struct ContentView: View {
 
     private var auditSection: some View {
         Section("Audit") {
-            Button(role: .destructive) {
-                HapticFeedback.notification(.warning)
-                Task { await appState.revokeAllPairings() }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "xmark.shield.fill")
-                    Text("Revoke All Pairings")
-                }
-            }
-            .liquidGlassButtonStyle(.standard)
-
             if auditEvents.isEmpty {
                 ContentUnavailableView {
                     Label("No Events", systemImage: "list.bullet.clipboard")

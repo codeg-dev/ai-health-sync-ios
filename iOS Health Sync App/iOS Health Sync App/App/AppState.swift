@@ -27,7 +27,6 @@ final class AppState {
     private let modelContainer: ModelContainer
     private let healthService = HealthKitService()
     private let auditService: AuditService
-    private let pairingService: PairingService
     private var notificationTask: Task<Void, Never>?
 
     var syncConfiguration: SyncConfiguration
@@ -38,7 +37,6 @@ final class AppState {
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
         self.auditService = AuditService(modelContainer: modelContainer)
-        self.pairingService = PairingService(modelContainer: modelContainer)
 
         let context = modelContainer.mainContext
         do {
@@ -129,11 +127,6 @@ final class AppState {
         } catch {
             AppLoggers.app.error("Failed to save type toggle: \(error.localizedDescription, privacy: .public)")
         }
-    }
-
-    func revokeAllPairings() async {
-        await pairingService.revokeAll()
-        await auditService.record(eventType: "auth.revoke", details: [:])
     }
 
     private func handleProtectedDataAvailable() {
