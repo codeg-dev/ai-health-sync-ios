@@ -3,7 +3,7 @@
 
 @preconcurrency import HealthKit
 
-protocol HealthStoreProtocol {
+protocol HealthStoreProtocol: Sendable {
     func requestAuthorization(toShare typesToShare: Set<HKSampleType>?, read typesToRead: Set<HKObjectType>?, completion: @escaping @Sendable (Bool, Error?) -> Void)
     func authorizationStatus(for type: HKObjectType) -> HKAuthorizationStatus
     func getRequestStatusForAuthorization(toShare typesToShare: Set<HKSampleType>, read typesToRead: Set<HKObjectType>, completion: @escaping @Sendable (HKAuthorizationRequestStatus, Error?) -> Void)
