@@ -39,7 +39,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func setupHealthKitSync() async {
         guard isHealthDataAvailable() else { return }
 
-        let allSampleTypes = HealthDataType.allCases.compactMap { $0.sampleType }
+        var seenIdentifiers = Set<String>()
+        let allSampleTypes: [HKSampleType] = HealthDataType.allCases.compactMap { dataType in
+            guard let sampleType = dataType.sampleType else { return nil }
+            let id = sampleType.identifier
+            guard !seenIdentifiers.contains(id) else { return nil }
+            seenIdentifiers.insert(id)
+            return sampleType
+        }
         guard !allSampleTypes.isEmpty else { return }
 
         do {
@@ -83,10 +90,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         } catch {
             AppLoggers.sync.error("Observer registration failed: \(error.localizedDescription, privacy: .public)")
             return
-        }
-
-        for type in allSampleTypes {
-            await svc.handleObserverUpdate(for: type)
         }
     }
 }

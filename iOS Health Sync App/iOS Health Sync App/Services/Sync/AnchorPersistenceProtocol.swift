@@ -35,4 +35,10 @@ protocol AnchorPersistenceProtocol: Sendable {
     ///   - sampleType: The HKSampleType to load sync date for
     /// - Returns: The persisted sync date, or nil if not found
     func loadLastSyncDate(for sampleType: HKSampleType) -> Date?
+
+    func resetAll()
+}
+
+extension AnchorPersistenceProtocol {
+    func resetAll() {}
 }

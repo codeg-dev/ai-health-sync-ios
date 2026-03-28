@@ -41,6 +41,12 @@ final class AnchorPersistence: AnchorPersistenceProtocol, @unchecked Sendable {
         let key = anchorKey(for: sampleType)
         userDefaults.removeObject(forKey: key)
     }
+
+    func resetAll() {
+        userDefaults.dictionaryRepresentation().keys
+            .filter { $0.hasPrefix("anchor.") || $0.hasPrefix("lastSync.") }
+            .forEach { userDefaults.removeObject(forKey: $0) }
+    }
     
     func saveLastSyncDate(_ date: Date, for sampleType: HKSampleType) {
         let key = lastSyncDateKey(for: sampleType)

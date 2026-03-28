@@ -22,6 +22,19 @@
 	<string>Vitalery에서 기록한 식단 영양정보를 Apple Health에 저장합니다.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>HealthSync uses your local network to share Health data with your Mac.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>100.87.151.20</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

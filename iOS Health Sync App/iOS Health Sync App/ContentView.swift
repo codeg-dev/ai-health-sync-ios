@@ -6,6 +6,10 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
+    @AppStorage("serverURL") private var serverURL: String = ""
+    @AppStorage("pushAPIKey") private var pushAPIKey: String = ""
+    @State private var isPushKeyVisible: Bool = false
+    @State private var showResetConfirmation = false
     @Query(sort: \AuditEventRecord.timestamp, order: .reverse) private var auditEvents: [AuditEventRecord]
 
     var body: some View {
@@ -142,17 +146,59 @@ struct ContentView: View {
     }
 
     private var settingsSection: some View {
-        Section("Settings") {
-            NavigationLink {
-                PrivacyPolicyView()
-            } label: {
-                Label("Privacy Policy", systemImage: "hand.raised.fill")
+        Group {
+            Section("Server Configuration") {
+                TextField("Server URL", text: $serverURL)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                HStack {
+                    if isPushKeyVisible {
+                        TextField("Push API Key", text: $pushAPIKey)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                    } else {
+                        SecureField("Push API Key", text: $pushAPIKey)
+                    }
+
+                    Button {
+                        isPushKeyVisible.toggle()
+                    } label: {
+                        Image(systemName: isPushKeyVisible ? "eye.slash" : "eye")
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
-            NavigationLink {
-                AboutView()
-            } label: {
-                Label("About", systemImage: "info.circle.fill")
+            Section("Settings") {
+                Button(role: .destructive) {
+                    showResetConfirmation = true
+                } label: {
+                    Label("Reset & Resync All Data", systemImage: "arrow.counterclockwise")
+                }
+                .confirmationDialog(
+                    "Reset all sync anchors and re-upload all Apple Health data from the beginning?",
+                    isPresented: $showResetConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("Reset & Resync", role: .destructive) {
+                        Task { await appState.resetSync() }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                }
+
+                NavigationLink {
+                    PrivacyPolicyView()
+                } label: {
+                    Label("Privacy Policy", systemImage: "hand.raised.fill")
+                }
+
+                NavigationLink {
+                    AboutView()
+                } label: {
+                    Label("About", systemImage: "info.circle.fill")
+                }
             }
         }
     }

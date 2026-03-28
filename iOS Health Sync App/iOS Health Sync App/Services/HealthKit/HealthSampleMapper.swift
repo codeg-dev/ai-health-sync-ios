@@ -8,7 +8,7 @@ struct HealthSampleMapper {
     static func mapSample(_ sample: HKSample, requestedType: HealthDataType) -> HealthSampleDTO? {
         let sourceName = sample.sourceRevision.source.name
         if let quantitySample = sample as? HKQuantitySample {
-            let unit = unitForQuantityType(requestedType)
+            guard let unit = unitForQuantityType(requestedType) else { return nil }
             let value = quantitySample.quantity.doubleValue(for: unit)
             return HealthSampleDTO(
                 id: quantitySample.uuid,
@@ -89,11 +89,13 @@ struct HealthSampleMapper {
     }
 
     // swiftlint:disable:next cyclomatic_complexity function_body_length
-    static func unitForQuantityType(_ type: HealthDataType) -> HKUnit {
+    static func unitForQuantityType(_ type: HealthDataType) -> HKUnit? {
         switch type {
-        // Activity - counts
-        case .steps, .standHours, .flightsClimbed, .swimmingStrokeCount, .pushCount,
-             .estimatedWorkoutEffortScore, .workoutEffortScore, .physicalEffort,
+        case .physicalEffort:
+            return .largeCalorie().unitDivided(by: .gramUnit(with: .kilo)).unitDivided(by: .hour())
+        case .estimatedWorkoutEffortScore, .workoutEffortScore:
+            return .appleEffortScore()
+        case .steps, .flightsClimbed, .swimmingStrokeCount, .pushCount,
              .inhalerUsage, .numberOfTimesFallen, .numberOfAlcoholicBeverages, .uvExposure:
             return .count()
         // Activity - distances (meters)
@@ -107,7 +109,7 @@ struct HealthSampleMapper {
         case .activeEnergyBurned, .basalEnergyBurned, .dietaryEnergyConsumed:
             return .kilocalorie()
         // Activity - time
-        case .exerciseTime, .appleMoveTime:
+        case .exerciseTime, .appleMoveTime, .standHours:
             return .minute()
         case .runningGroundContactTime, .timeInDaylight:
             return .second()
@@ -146,7 +148,7 @@ struct HealthSampleMapper {
             return .degreeCelsius()
         // Vitals - fitness
         case .vo2Max:
-            return HKUnit(from: "ml/kg*min")
+            return HKUnit(from: "mL/(kg*min)")
         // Vitals - glucose
         case .bloodGlucose:
             return HKUnit(from: "mg/dL")
@@ -163,7 +165,7 @@ struct HealthSampleMapper {
             return HKUnit(from: "L/min")
         // Vitals - sleep breathing
         case .appleSleepingBreathingDisturbances:
-            return HKUnit.count().unitDivided(by: .hour())
+            return .count()
         // Body
         case .weight, .leanBodyMass:
             return .gramUnit(with: .kilo)

@@ -17,10 +17,7 @@ actor PushSyncService: NSObject, URLSessionDataDelegate, PushSyncServicing {
         self.serverURL = serverURL
         self.apiKey = apiKey
         super.init()
-        let config = URLSessionConfiguration.background(withIdentifier: Self.sessionIdentifier)
-        config.isDiscretionary = false
-        config.sessionSendsLaunchEvents = true
-        self.session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
     }
 
     init(apiKey: String) throws {
@@ -31,18 +28,19 @@ actor PushSyncService: NSObject, URLSessionDataDelegate, PushSyncServicing {
         self.serverURL = serverURL
         self.apiKey = apiKey
         super.init()
-        let config = URLSessionConfiguration.background(withIdentifier: Self.sessionIdentifier)
-        config.isDiscretionary = false
-        config.sessionSendsLaunchEvents = true
-        self.session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
     }
 
     func upload(domain: String, records: [HealthSampleDTO]) async throws -> PushResponse {
-        let endpoint = serverURL.appendingPathComponent("ahk/push")
+        let storedKey = UserDefaults.standard.string(forKey: "pushAPIKey") ?? ""
+        let currentKey = storedKey.isEmpty ? apiKey : storedKey
+        let currentURLString = UserDefaults.standard.string(forKey: "serverURL") ?? ""
+        let effectiveServerURL = URL(string: currentURLString) ?? serverURL
+        let endpoint = effectiveServerURL.appendingPathComponent("ahk/push")
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(currentKey)", forHTTPHeaderField: "Authorization")
 
         let body = AhkPushRequest(domain: domain, records: records.map(AhkPushRecord.init))
         let encoder = JSONEncoder()

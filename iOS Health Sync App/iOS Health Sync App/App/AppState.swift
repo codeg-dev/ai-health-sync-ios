@@ -112,6 +112,12 @@ final class AppState {
         }
     }
 
+    func resetSync() async {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate,
+              let service = appDelegate.observerService else { return }
+        await service.resetAndResync()
+    }
+
     func toggleType(_ type: HealthDataType, enabled: Bool) {
         var types = syncConfiguration.enabledTypes
         if enabled {
